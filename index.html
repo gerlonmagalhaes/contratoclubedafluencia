@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrato Digital - My Personal Teacher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <!-- Biblioteca para gerar o PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 24px;
+            height: 24px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
+        }
+        .signature-wrapper {
+            position: relative;
+            width: 100%;
+            height: 12rem;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        #signature-pad {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="container bg-white w-full max-w-3xl mx-auto p-8 md:p-12 rounded-2xl shadow-lg">
+        <div class="header text-center mb-8">
+            <img src="https://placehold.co/200x80/3498db/white?text=My+Personal+Teacher" alt="Logo My Personal Teacher" class="mx-auto mb-4 rounded-lg">
+            <h1 class="text-3xl font-bold text-gray-800">Contrato Digital - Clube da Fluência</h1>
+            <p class="text-gray-600 mt-2">Preencha, assine e baixe seu contrato de matrícula.</p>
+        </div>
+
+        <form id="contract-form">
+            <div class="space-y-6">
+                 <div class="form-group">
+                    <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">Nome completo do aluno(a)</label>
+                    <input type="text" id="fullName" name="Nome do Aluno" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition" required placeholder="Digite seu nome completo">
+                </div>
+                <div class="form-group">
+                    <label for="cpf" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                    <input type="text" id="cpf" name="CPF" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition" required placeholder="000.000.000-00">
+                </div>
+                <div class="form-group">
+                    <label for="birthdate" class="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
+                    <input type="date" id="birthdate" name="Data de Nascimento" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition" required>
+                </div>
+                <div class="form-group">
+                    <label for="plan" class="block text-sm font-medium text-gray-700 mb-1">Escolha o seu plano</label>
+                    <select id="plan" name="Plano Escolhido" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition bg-white" required>
+                        <option value="" disabled selected>Selecione um plano</option>
+                        <option value="6 meses - R$ 1.200,00 à vista">6 meses - R$ 1.200,00 à vista</option>
+                        <option value="1 ano - R$ 2.000,00 à vista">1 ano - R$ 2.000,00 à vista</option>
+                    </select>
+                    <small class="text-gray-500 mt-1 block">Para pagamento parcelado, haverá acréscimo de 4,9%.</small>
+                </div>
+            </div>
+
+            <div class="form-group mt-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Assinatura Digital</label>
+                <div class="signature-wrapper border border-gray-300 rounded-lg">
+                    <canvas id="signature-pad"></canvas>
+                </div>
+                <div class="text-right">
+                    <button type="button" id="clear-signature" class="text-sm text-blue-600 hover:underline mt-2">Limpar</button>
+                </div>
+            </div>
+
+            <div class="terms mt-6">
+                <div class="flex items-start">
+                    <input type="checkbox" id="terms" name="terms" required class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1">
+                    <label for="terms" class="ml-2 text-sm text-gray-700">Eu li e concordo com os <a href="#" id="view-contract-link" class="font-medium text-blue-600 hover:underline">termos do contrato</a>.</label>
+                </div>
+            </div>
+            
+            <button type="submit" id="submit-button" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 mt-8 flex items-center justify-center">
+                <span id="button-text">Gerar e Baixar Contrato PDF</span>
+                <div id="loader" class="loader hidden ml-3"></div>
+            </button>
+        </form>
+
+        <div id="status-message" class="mt-6 text-center"></div>
+        
+        <div id="contract-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+             <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b sticky top-0 bg-white">
+                    <h2 class="text-xl font-bold">Termos do Contrato</h2>
+                    <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+                <div id="contract-content-modal" class="p-6 text-sm text-gray-700 space-y-4"></div>
+                 <div class="p-4 border-t sticky bottom-0 bg-white text-right">
+                    <button id="close-modal-footer" class="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300">Fechar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer text-center mt-10 text-xs text-gray-500">
+            <p>My Personal Teacher - Clube da Fluência</p>
+            <p>+55 71 92001-2811 | cursomyteacher@gmail.com</p>
+        </div>
+    </div>
+    
+    <script>
+        // Inicializa o jsPDF
+        const { jsPDF } = window.jspdf;
+
+        // --- LÓGICA DO CONTADOR DE CONTRATO ---
+        function getContractNumber() {
+            let contractNumber = localStorage.getItem('contractCounter');
+            if (!contractNumber || isNaN(parseInt(contractNumber))) {
+                // Se não existir ou não for um número, começa do 1
+                contractNumber = 1; 
+            }
+            return parseInt(contractNumber);
+        }
+
+        function incrementContractNumber() {
+            let currentNumber = getContractNumber();
+            currentNumber++;
+            localStorage.setItem('contractCounter', currentNumber.toString());
+        }
+
+        // --- LÓGICA GERAL E DO MODAL ---
+        const viewContractLink = document.getElementById('view-contract-link');
+        const contractModal = document.getElementById('contract-modal');
+        const closeModalButton = document.getElementById('close-modal');
+        const closeModalFooterButton = document.getElementById('close-modal-footer');
+        const contractContentModal = document.getElementById('contract-content-modal');
+        const cpfInput = document.getElementById('cpf');
+
+        cpfInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            e.target.value = value.slice(0, 14);
+        });
+
+        function getContractTextForModal() {
+            // Retorna o texto do contrato com tags HTML para o Modal
+            return `
+                <h4>CLÁUSULA 1 - OBJETO</h4>
+                <p>1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês, na modalidade de grupo de até 8 participantes, voltado à prática e desenvolvimento da fluência e conversação do(a) CONTRATANTE.</p>
+                <p>1.2. O Clube da Fluência realizará encontros síncronos 2 (duas) vezes por semana, com foco primordial na conversação, abrangendo temas variados, debates, simulações de situações cotidianas e apresentações. Os dias da semana para a realização desses encontros serão definidos previamente para cada semestre.</p>
+                <p>1.3. O serviço objeto deste contrato é de natureza híbrida, sendo composto por:<br>
+                a) Licença de Acesso e Uso de Material Didático Digital: Concessão de uma licença não exclusiva e intransferível para que o CONTRATANTE acesse e utilize a integralidade do conteúdo digital do curso, incluindo, mas não se limitando à, videoaulas gravadas em plataforma, materiais em PDF e Powerpoint, atividades no Google Sala de Aula e outros recursos digitais. O acesso a este componente é liberado integralmente ao CONTRATANTE na data de início da vigência do contrato.<br>
+                b) Serviços de Instrução e Acompanhamento Contínuo: Prestação de serviços de ensino através de encontros de conversação online (aulas síncronas), suporte para dúvidas e acompanhamento pedagógico, que ocorrem de forma contínua e programada ao longo do período contratual.</p>
+                
+                <h4>CLÁUSULA 2 - DURAÇÃO DO PROGRAMA</h4>
+                <p>2.1. O CONTRATANTE opta pelo programa de 6 (seis) meses ou 1 (um) ano de duração.</p>
+                <p>2.2. Os encontros terão duração de 40 (quarenta) minutos cada, podendo ser estendidos para até 1 (uma) hora a depender do tema abordado a critério da CONTRATADA. Os demais períodos serão reservados para os recessos previstos no cronograma do programa.</p>
+
+                <h4>CLÁUSULA 3 - RESPONSABILIDADES DO/A CONTRATANTE</h4>
+                <p>3.1. O sucesso do programa depende diretamente do comprometimento do/a CONTRATANTE. Para alcançar os objetivos, este deverá:<br>
+                a) Participar dos encontros síncronos agendados.<br>
+                b) Assistir às aulas gravadas disponibilizadas.<br>
+                c) Seguir o plano de estudos personalizado elaborado pelo programa.</p>
+                <p>3.2. A ausência de comprometimento nas ações acima citadas pode comprometer os resultados esperados, não sendo responsabilidade da CONTRATADA.</p>
+
+                <h4>CLÁUSULA 4 - RESPONSABILIDADES DA CONTRATADA</h4>
+                <p>4.1. A CONTRATADA se compromete a fornecer ao(à) CONTRATANTE os serviços e recursos, conforme o plano de Clube de Conversação contratado e durante o período de vigência escolhido (6 ou 12 meses). Após esse período, o acesso será removido, caso não haja renovação do contrato. O CONTRATANTE poderá renovar o contrato a qualquer tempo, mediante novo acordo.</p>
+                <p>4.2. A CONTRATADA também se responsabiliza por fornecer os seguintes recursos e serviços:<br>
+                a) Acesso a módulos de aulas de gramática em vídeo na plataforma Nutror (ou plataforma de vídeo equivalente) e atividades no Google Sala de Aula. O número exato de aulas e exercícios dependerá do conteúdo disponibilizado.<br>
+                b) Os encontros online ocorrerão conforme a quantidade e duração especificadas na Cláusula 2.2.<br>
+                c) Acompanhamento mensal do desempenho do(a) CONTRATANTE.</p>
+                <p>4.3. A CONTRATADA garante que será designado um mentor qualificado para acompanhar o(a) CONTRATANTE durante a vigência deste contrato, podendo ser profissionais diferentes, mas assegurando o mesmo método e padrão de acompanhamento da CONTRATADA.</p>
+
+                <h4>CLÁUSULA 5 - POLÍTICA DE PAGAMENTO E REEMBOLSO</h4>
+                <p>5.1. O pagamento pelos serviços do Clube de Conversação deve ser realizado no ato da contratação, seguindo as condições acordadas.</p>
+                <p>5.2. Em caso de pagamento parcelado com cartão de crédito, poderá haver acréscimo no valor total do contrato devido às taxas cobradas pela operadora do cartão que serão arcadas pelo CONTRATANTE.</p>
+                <p>5.3. Em caso de desistência por parte do CONTRATANTE após o início do curso após período de sete dias, será cobrado o valor proporcional referente às aulas não ministradas, calculado com base na carga horária contratada, nas licenças de acesso de uso do material e no valor total pago.</p>
+                <p>5.4. Sobre o saldo remanescente referente valor das aulas não realizadas, poderá ser aplicada multa contratual de até 20% (vinte por cento), destinada a cobrir custos administrativos.</p>
+                <p>5.5. O valor restante, após a dedução proporcional e da multa, será devolvido ao CONTRATANTE ou, a seu critério, convertido em crédito para utilização em outros serviços oferecidos pela CONTRATADA, válido por até 12 (doze) meses a partir da data da desistência.</p>
+                <p>5.6. Fica assegurado ao CONTRATANTE o direito de arrependimento no prazo de 7 (sete) dias corridos a contar da assinatura do contrato ou do primeiro pagamento, com devolução integral dos valores pagos, conforme disposto no artigo 49 do Código de Defesa do Consumidor.</p>
+
+                <h4>CLÁUSULA 6 - CONFIDENCIALIDADE E USO DE INFORMAÇÕES</h4>
+                <p>6.1. Todas as informações pessoais e profissionais compartilhadas pelo/a CONTRATANTE com a CONTRATADA serão tratadas com sigilo. A CONTRATADA se compromete a não divulgar dados confidenciais a terceiros.</p>
+                <p>6.2. O/A CONTRATANTE concorda que informações não confidenciais, como depoimentos, dados gerais sobre progresso e resultados, poderão ser utilizadas pela CONTRATADA para fins educativos e de propaganda. Isso inclui o uso como estudos de caso e materiais para a comunidade do Clube de Conversação.</p>
+
+                <h4>CLÁUSULA 7 - RESCISÃO DO CONTRATO</h4>
+                <p>7.1. O presente contrato será automaticamente rescindido ao término do prazo de vigência contratado (6 ou 12 meses), e o acesso a todo o conteúdo e serviços será encerrado neste momento.</p>
+                <p>7.2. A CONTRATADA poderá rescindir o contrato caso o/a CONTRATANTE não siga as condições estabelecidas neste CONTRATO.</p>
+
+                <h4>CLÁUSULA 8 - DISPOSIÇÕES FINAIS</h4>
+                <p>8.1. Ao assinar este contrato, o/a CONTRATANTE declara que leu e concorda com os termos apresentados.</p>
+                <p>8.2. A vigência deste contrato é a definida na Cláusula 2.1.</p>
+            `;
+        }
+        
+        viewContractLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            contractContentModal.innerHTML = getContractTextForModal();
+            contractModal.classList.remove('hidden');
+            contractModal.classList.add('flex');
+        });
+
+        const closeModal = () => {
+            contractModal.classList.add('hidden');
+            contractModal.classList.remove('flex');
+        };
+        closeModalButton.addEventListener('click', closeModal);
+        closeModalFooterButton.addEventListener('click', closeModal);
+        
+        const canvas = document.getElementById('signature-pad');
+        const clearSignatureButton = document.getElementById('clear-signature');
+        const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+        
+        function resizeCanvas() {
+            const ratio =  Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
+            signaturePad.fromData(signaturePad.toData());
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        clearSignatureButton.addEventListener('click', () => { signaturePad.clear(); });
+
+        const form = document.getElementById('contract-form');
+        const statusMessage = document.getElementById('status-message');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const loader = document.getElementById('loader');
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            if (signaturePad.isEmpty()) {
+                statusMessage.innerHTML = '<p class="text-red-600 font-semibold">Por favor, forneça sua assinatura no campo indicado.</p>';
+                return;
+            }
+
+            buttonText.textContent = 'Gerando PDF...';
+            loader.classList.remove('hidden');
+            submitButton.disabled = true;
+            statusMessage.innerHTML = ''; // Limpa mensagens anteriores
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+
+                const contractNumber = getContractNumber();
+                const contractNumberFormatted = String(contractNumber).padStart(2, '0');
+
+                const fullName = document.getElementById('fullName').value;
+                const cpf = document.getElementById('cpf').value;
+                const plan = document.getElementById('plan').value;
+                const signatureImage = signaturePad.toDataURL('image/png');
+                const currentDate = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                const pageHeight = pdf.internal.pageSize.height || pdf.internal.pageSize.getHeight();
+                const pageWidth = pdf.internal.pageSize.width || pdf.internal.pageSize.getWidth();
+                const margin = 20;
+                let y = margin;
+
+                // Função auxiliar para adicionar texto com quebra de linha automática e controle de página
+                const addText = (text, options = {}) => {
+                    const { size = 10, style = 'normal', align = 'left', spaceAfter = 5 } = options;
+                    const x = align === 'center' ? pageWidth / 2 : margin;
+                    const finalAlign = align === 'left' ? null : align;
+
+                    pdf.setFontSize(size);
+                    pdf.setFont('helvetica', style);
+
+                    const splitText = pdf.splitTextToSize(text, pageWidth - (margin * 2));
+                    
+                    const textHeight = splitText.length * (size * 0.35);
+                    if (y + textHeight > pageHeight - margin) {
+                        pdf.addPage();
+                        y = margin;
+                    }
+
+                    pdf.text(splitText, x, y, { align: finalAlign });
+                    y += textHeight + spaceAfter;
+                };
+
+                // --- INÍCIO DO CONTEÚDO DO PDF ---
+                addText(`CONTRATO CLUBE DA FLUÊNCIA MY PERSONAL TEACHER ${contractNumberFormatted}/2025`, { size: 14, style: 'bold', align: 'center', spaceAfter: 10 });
+                addText('CONTRATADA: MY PERSONAL TEACHER, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o n° 31.890.545/0001-44.', { style: 'bold', spaceAfter: 10 });
+                addText(`CONTRATANTE: ${fullName}`, { style: 'bold' });
+                addText(`CPF: ${cpf}`, { style: 'bold' });
+                addText(`PLANO: ${plan}`, { style: 'bold', spaceAfter: 10 });
+                
+                const contractClauses = [
+                    { title: 'CLÁUSULA 1 - OBJETO', text: '1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês, na modalidade de grupo de até 8 participantes, voltado à prática e desenvolvimento da fluência e conversação do(a) CONTRATANTE.\n1.2. O Clube da Fluência realizará encontros síncronos 2 (duas) vezes por semana, com foco primordial na conversação, abrangendo temas variados, debates, simulações de situações cotidianas e apresentações. Os dias da semana para a realização desses encontros serão definidos previamente para cada semestre.\n1.3. O serviço objeto deste contrato é de natureza híbrida, sendo composto por:\na) Licença de Acesso e Uso de Material Didático Digital: Concessão de uma licença não exclusiva e intransferível para que o CONTRATANTE acesse e utilize a integralidade do conteúdo digital do curso, incluindo, mas não se limitando à, videoaulas gravadas em plataforma, materiais em PDF e Powerpoint, atividades no Google Sala de Aula e outros recursos digitais. O acesso a este componente é liberado integralmente ao CONTRATANTE na data de início da vigência do contrato.\nb) Serviços de Instrução e Acompanhamento Contínuo: Prestação de serviços de ensino através de encontros de conversação online (aulas síncronas), suporte para dúvidas e acompanhamento pedagógico, que ocorrem de forma contínua e programada ao longo do período contratual.' },
+                    { title: 'CLÁUSULA 2 - DURAÇÃO DO PROGRAMA', text: '2.1. O CONTRATANTE opta pelo programa de 6 (seis) meses ou 1 (um) ano de duração.\n2.2. Os encontros terão duração de 40 (quarenta) minutos cada, podendo ser estendidos para até 1 (uma) hora a depender do tema abordado a critério da CONTRATADA. Os demais períodos serão reservados para os recessos previstos no cronograma do programa.' },
+                    { title: 'CLÁUSULA 3 - RESPONSABILIDADES DO/A CONTRATANTE', text: '3.1. O sucesso do programa depende diretamente do comprometimento do/a CONTRATANTE. Para alcançar os objetivos, este deverá:\na) Participar dos encontros síncronos agendados.\nb) Assistir às aulas gravadas disponibilizadas.\nc) Seguir o plano de estudos personalizado elaborado pelo programa.\n3.2. A ausência de comprometimento nas ações acima citadas pode comprometer os resultados esperados, não sendo responsabilidade da CONTRATADA.' },
+                    { title: 'CLÁUSULA 4 - RESPONSABILIDADES DA CONTRATADA', text: '4.1. A CONTRATADA se compromete a fornecer ao(à) CONTRATANTE os serviços e recursos, conforme o plano de Clube de Conversação contratado e durante o período de vigência escolhido (6 ou 12 meses). Após esse período, o acesso será removido, caso não haja renovação do contrato. O CONTRATANTE poderá renovar o contrato a qualquer tempo, mediante novo acordo.\n4.2. A CONTRATADA também se responsabiliza por fornecer os seguintes recursos e serviços:\na) Acesso a módulos de aulas de gramática em vídeo na plataforma Nutror (ou plataforma de vídeo equivalente) e atividades no Google Sala de Aula. O número exato de aulas e exercícios dependerá do conteúdo disponibilizado.\nb) Os encontros online ocorrerão conforme a quantidade e duração especificadas na Cláusula 2.2.\nc) Acompanhamento mensal do desempenho do(a) CONTRATANTE.\n4.3. A CONTRATADA garante que será designado um mentor qualificado para acompanhar o(a) CONTRATANTE durante a vigência deste contrato, podendo ser profissionais diferentes, mas assegurando o mesmo método e padrão de acompanhamento da CONTRATADA.' },
+                    { title: 'CLÁUSULA 5 - POLÍTICA DE PAGAMENTO E REEMBOLSO', text: '5.1. O pagamento pelos serviços do Clube de Conversação deve ser realizado no ato da contratação, seguindo as condições acordadas.\n5.2. Em caso de pagamento parcelado com cartão de crédito, poderá haver acréscimo no valor total do contrato devido às taxas cobradas pela operadora do cartão que serão arcadas pelo CONTRATANTE.\n5.3. Em caso de desistência por parte do CONTRATANTE após o início do curso após período de sete dias, será cobrado o valor proporcional referente às aulas não ministradas, calculado com base na carga horária contratada, nas licenças de acesso de uso do material e no valor total pago.\n5.4. Sobre o saldo remanescente referente valor das aulas não realizadas, poderá ser aplicada multa contratual de até 20% (vinte por cento), destinada a cobrir custos administrativos.\n5.5. O valor restante, após a dedução proporcional e da multa, será devolvido ao CONTRATANTE ou, a seu critério, convertido em crédito para utilização em outros serviços oferecidos pela CONTRATADA, válido por até 12 (doze) meses a partir da data da desistência.\n5.6. Fica assegurado ao CONTRATANTE o direito de arrependimento no prazo de 7 (sete) dias corridos a contar da assinatura do contrato ou do primeiro pagamento, com devolução integral dos valores pagos, conforme disposto no artigo 49 do Código de Defesa do Consumidor.' },
+                    { title: 'CLÁUSULA 6 - CONFIDENCIALIDADE E USO DE INFORMAÇÕES', text: '6.1. Todas as informações pessoais e profissionais compartilhadas pelo/a CONTRATANTE com a CONTRATADA serão tratadas com sigilo. A CONTRATADA se compromete a não divulgar dados confidenciais a terceiros.\n6.2. O/A CONTRATANTE concorda que informações não confidenciais, como depoimentos, dados gerais sobre progresso e resultados, poderão ser utilizadas pela CONTRATADA para fins educativos e de propaganda. Isso inclui o uso como estudos de caso e materiais para a comunidade do Clube de Conversação.' },
+                    { title: 'CLÁUSULA 7 - RESCISÃO DO CONTRATO', text: '7.1. O presente contrato será automaticamente rescindido ao término do prazo de vigência contratado (6 ou 12 meses), e o acesso a todo o conteúdo e serviços será encerrado neste momento.\n7.2. A CONTRATADA poderá rescindir o contrato caso o/a CONTRATANTE não siga as condições estabelecidas neste CONTRATO.' },
+                    { title: 'CLÁUSULA 8 - DISPOSIÇÕES FINAIS', text: '8.1. Ao assinar este contrato, o/a CONTRATANTE declara que leu e concorda com os termos apresentados.\n8.2. A vigência deste contrato é a definida na Cláusula 2.1.' }
+                ];
+
+                contractClauses.forEach(clause => {
+                    addText(clause.title, { style: 'bold', size: 11, spaceAfter: 3 });
+                    addText(clause.text, { size: 10, spaceAfter: 8 });
+                });
+
+                addText(`Salvador/BA, ${currentDate}.`, { spaceAfter: 20 });
+                
+                // --- ASSINATURA ---
+                const signatureWidthMm = 60;
+                const signatureHeightMm = 30;
+                if (y + signatureHeightMm > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+                pdf.addImage(signatureImage, 'PNG', margin, y, signatureWidthMm, signatureHeightMm);
+                y += signatureHeightMm + 2;
+
+                addText('_________________________', { size: 10, spaceAfter: 2 });
+                addText(fullName, { size: 10 });
+
+                // --- FIM DO CONTEÚDO DO PDF ---
+
+                pdf.save(`Contrato-${fullName}.pdf`);
+                
+                incrementContractNumber();
+
+                statusMessage.innerHTML = `
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg" role="alert">
+                        <p class="font-bold">PDF Baixado com Sucesso!</p>
+                        <p class="mt-2">Para finalizar sua matrícula, anexe o arquivo PDF que você acabou de baixar e envie para um dos canais abaixo:</p>
+                        <div class="mt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
+                            <a href="mailto:cursomyteacher@gmail.com" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
+                                Enviar por E-mail
+                            </a>
+                            <a href="https://wa.me/5571920012811" target="_blank" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.908 6.161l-1.317 4.814 4.893-1.282zM9.062 8.611c-.028-.148-.057-.148-.232-.148-.159 0-.341-.028-.516-.028-.21 0-.441.028-.662.311-.232.296-.836.837-.836 2.015 0 1.178.863 2.333 1.002 2.48.14.148.281.312.441.312.159 0 .341-.028.516-.148.19-.133 1.259-.627 2.387-2.355.873-1.332 1.332-1.776 1.492-2.001.14-.232.112-.341-.028-.483-.14-.148-.281-.148-.412-.148h-.187c-.141 0-.332.028-.503.223-.19.195-.312.454-.423.565-.111.111-.223.133-.332.056-.111-.084-.462-.167-.862-.516-.328-.296-.549-.627-.615-.737z"/></svg>
+                                Enviar por WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                `;
+                form.reset();
+                signaturePad.clear();
+
+            } catch (error) {
+                statusMessage.innerHTML = `<p class="text-red-600 font-semibold">Ocorreu um erro ao gerar o PDF: ${error.message}</p>`;
+            } finally {
+                buttonText.textContent = 'Gerar e Baixar Contrato PDF';
+                loader.classList.add('hidden');
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+
