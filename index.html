@@ -56,8 +56,8 @@
                     <label for="plan" class="block text-sm font-medium text-gray-700 mb-1">Escolha o seu plano</label>
                     <select id="plan" name="Plano Escolhido" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition bg-white" required>
                         <option value="" disabled selected>Selecione um plano</option>
-                        <option value="6 meses - R$ 1.800,00 à vista">6 meses - R$ 1.800,00 à vista</option>
-                        <option value="1 ano - R$ 3.300,00 à vista">1 ano - R$ 3.300,00 à vista</option>
+                        <option value="6 meses - R$ 1.200,00 à vista">6 meses - R$ 1.200,00 à vista</option>
+                        <option value="1 ano - R$ 2.000,00 à vista">1 ano - R$ 2.000,00 à vista</option>
                     </select>
                     <small class="text-gray-500 mt-1 block">Para pagamento parcelado, haverá acréscimo de 4,9%.</small>
                 </div>
@@ -144,7 +144,7 @@
                 <h4>CLÁUSULA 1 - OBJETO</h4>
                 <p>1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês...</p>
                 <p><i>(Texto resumido para visualização. O contrato completo será gerado no PDF)</i></p>
-                `;
+            `;
         }
         
         viewContractLink.addEventListener('click', (e) => {
@@ -186,7 +186,6 @@
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
             
-            // Valida se há assinatura
             if (signaturePad.isEmpty()) {
                 statusMessage.innerHTML = '<p class="text-red-600 font-semibold">Por favor, forneça sua assinatura no campo indicado.</p>';
                 return;
@@ -204,26 +203,19 @@
                 const contractNumber = getContractNumber();
                 const contractNumberFormatted = String(contractNumber).padStart(2, '0');
 
-                // --- CAPTURA DE DADOS DO FORMULÁRIO ---
                 const fullName = document.getElementById('fullName').value;
                 const cpf = document.getElementById('cpf').value;
                 const plan = document.getElementById('plan').value;
-                
-                // NOVO: Captura o endereço
                 const address = document.getElementById('address').value;
-                
-                // NOVO: Captura a data de nascimento e formata para o padrão BR (Dia/Mês/Ano)
                 const birthdateRaw = document.getElementById('birthdate').value;
                 const birthdate = birthdateRaw.split('-').reverse().join('/');
 
-                // NOVO: Validação simples para exigir nome completo (verifica se há espaços)
                 if (!fullName.trim().includes(' ')) {
                     alert('Por favor, digite seu nome completo (Nome e Sobrenome).');
-                    // Reseta o estado do botão
                     buttonText.textContent = 'Gerar e Baixar Contrato PDF';
                     loader.classList.add('hidden');
                     submitButton.disabled = false;
-                    return; // Para a execução
+                    return;
                 }
 
                 const signatureImage = signaturePad.toDataURL('image/png');
@@ -234,39 +226,49 @@
                 const margin = 20;
                 let y = margin;
 
+                // --- NOVA FUNÇÃO PARA ADICIONAR TEXTO JUSTIFICADO ---
                 const addText = (text, options = {}) => {
-                    const { size = 10, style = 'normal', align = 'left', spaceAfter = 5 } = options;
-                    const x = align === 'center' ? pageWidth / 2 : margin;
-                    const finalAlign = align === 'left' ? null : align;
-
+                    // O padrão de alinhamento agora é 'justify' (justificado)
+                    const { size = 10, style = 'normal', align = 'justify', spaceAfter = 5 } = options;
+                    
                     pdf.setFontSize(size);
                     pdf.setFont('helvetica', style);
 
-                    const splitText = pdf.splitTextToSize(text, pageWidth - (margin * 2));
-                    
-                    const textHeight = splitText.length * (size * 0.35);
-                    if (y + textHeight > pageHeight - margin) {
+                    const maxLineWidth = pageWidth - (margin * 2);
+
+                    // Verifica a altura que o texto vai ocupar para saber se cabe na página
+                    const textDimensions = pdf.getTextDimensions(text, {
+                        fontSize: size,
+                        maxWidth: maxLineWidth
+                    });
+
+                    // Se a posição atual + altura do texto passar do limite da página, cria nova página
+                    if (y + textDimensions.h > pageHeight - margin) {
                         pdf.addPage();
                         y = margin;
                     }
 
-                    pdf.text(splitText, x, y, { align: finalAlign });
-                    y += textHeight + spaceAfter;
+                    // Escreve o texto com o alinhamento e limite de largura definidos
+                    pdf.text(text, margin, y, {
+                        maxWidth: maxLineWidth,
+                        align: align
+                    });
+
+                    // Atualiza a posição Y para o próximo bloco
+                    y += textDimensions.h + spaceAfter;
                 };
 
                 // --- MONTAGEM DO PDF ---
+                // Títulos e dados pessoais usam align: 'center' ou 'left' (padrão)
                 addText(`CONTRATO CLUBE DA FLUÊNCIA MY PERSONAL TEACHER ${contractNumberFormatted}/2025`, { size: 14, style: 'bold', align: 'center', spaceAfter: 10 });
-                addText('CONTRATADA: MY PERSONAL TEACHER, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o n° 31.890.545/0001-44.', { style: 'bold', spaceAfter: 10 });
+                addText('CONTRATADA: MY PERSONAL TEACHER, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o n° 31.890.545/0001-44.', { style: 'bold', align: 'left', spaceAfter: 10 });
                 
-                // --- INSERÇÃO DOS DADOS DO ALUNO NO PDF (DADOS COMPLETOS) ---
-                addText(`CONTRATANTE: ${fullName}`, { style: 'bold' });
-                addText(`CPF: ${cpf}`, { style: 'bold' });
-                // NOVO: Adicionando Data de Nascimento e Endereço ao PDF
-                addText(`DATA DE NASCIMENTO: ${birthdate}`, { style: 'bold' });
-                addText(`ENDEREÇO: ${address}`, { style: 'bold' });
-                addText(`PLANO: ${plan}`, { style: 'bold', spaceAfter: 10 });
+                addText(`CONTRATANTE: ${fullName}`, { style: 'bold', align: 'left' });
+                addText(`CPF: ${cpf}`, { style: 'bold', align: 'left' });
+                addText(`DATA DE NASCIMENTO: ${birthdate}`, { style: 'bold', align: 'left' });
+                addText(`ENDEREÇO: ${address}`, { style: 'bold', align: 'left' });
+                addText(`PLANO: ${plan}`, { style: 'bold', align: 'left', spaceAfter: 10 });
                 
-                // Array com as cláusulas (Mantido o original, apenas ocultado aqui para economizar espaço na resposta)
                 const contractClauses = [
                     { title: 'CLÁUSULA 1 - OBJETO', text: '1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês, na modalidade de grupo de até 8 participantes, voltado à prática e desenvolvimento da fluência e conversação do(a) CONTRATANTE.\n1.2. O Clube da Fluência realizará encontros síncronos 2 (duas) vezes por semana, com foco primordial na conversação, abrangendo temas variados, debates, simulações de situações cotidianas e apresentações. Os dias da semana para a realização desses encontros serão definidos previamente para cada semestre.\n1.3. O serviço objeto deste contrato é de natureza híbrida, sendo composto por:\na) Licença de Acesso e Uso de Material Didático Digital: Concessão de uma licença não exclusiva e intransferível para que o CONTRATANTE acesse e utilize a integralidade do conteúdo digital do curso, incluindo, mas não se limitando à, videoaulas gravadas em plataforma, materiais em PDF e Powerpoint, atividades no Google Sala de Aula e outros recursos digitais. O acesso a este componente é liberado integralmente ao CONTRATANTE na data de início da vigência do contrato.\nb) Serviços de Instrução e Acompanhamento Contínuo: Prestação de serviços de ensino através de encontros de conversação online (aulas síncronas), suporte para dúvidas e acompanhamento pedagógico, que ocorrem de forma contínua e programada ao longo do período contratual.' },
                     { title: 'CLÁUSULA 2 - DURAÇÃO DO PROGRAMA', text: '2.1. O CONTRATANTE opta pelo programa de 6 (seis) meses ou 1 (um) ano de duração.\n2.2. Os encontros terão duração de 40 (quarenta) minutos cada, podendo ser estendidos para até 1 (uma) hora a depender do tema abordado a critério da CONTRATADA. Os demais períodos serão reservados para os recessos previstos no cronograma do programa.' },
@@ -279,11 +281,13 @@
                 ];
 
                 contractClauses.forEach(clause => {
-                    addText(clause.title, { style: 'bold', size: 11, spaceAfter: 3 });
-                    addText(clause.text, { size: 10, spaceAfter: 8 });
+                    // Títulos alinhados à esquerda (padrão)
+                    addText(clause.title, { style: 'bold', size: 11, spaceAfter: 3, align: 'left' });
+                    // Texto do contrato JUSTIFICADO (quadradinho)
+                    addText(clause.text, { size: 10, spaceAfter: 8, align: 'justify' });
                 });
 
-                addText(`Salvador/BA, ${currentDate}.`, { spaceAfter: 20 });
+                addText(`Salvador/BA, ${currentDate}.`, { spaceAfter: 20, align: 'left' });
                 
                 const signatureWidthMm = 60;
                 const signatureHeightMm = 30;
@@ -294,8 +298,8 @@
                 pdf.addImage(signatureImage, 'PNG', margin, y, signatureWidthMm, signatureHeightMm);
                 y += signatureHeightMm + 2;
 
-                addText('_________________________', { size: 10, spaceAfter: 2 });
-                addText(fullName, { size: 10 });
+                addText('_________________________', { size: 10, spaceAfter: 2, align: 'left' });
+                addText(fullName, { size: 10, align: 'left' });
 
                 pdf.save(`Contrato-${fullName}.pdf`);
                 incrementContractNumber();
