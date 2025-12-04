@@ -21,6 +21,8 @@
             -moz-user-select: none; -webkit-user-select: none; -ms-user-select: none; user-select: none;
         }
         #signature-pad { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+        /* Estilo para garantir quebras de linha corretas no modal */
+        #contract-content-modal p { white-space: pre-wrap; } 
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -110,6 +112,18 @@
     <script>
         const { jsPDF } = window.jspdf;
 
+        // --- DEFINIÇÃO ÚNICA DAS CLÁUSULAS (Para Modal e PDF) ---
+        const contractClauses = [
+            { title: 'CLÁUSULA 1 - OBJETO', text: '1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês, na modalidade de grupo de até 8 participantes, voltado à prática e desenvolvimento da fluência e conversação do(a) CONTRATANTE.\n1.2. O Clube da Fluência realizará encontros síncronos 2 (duas) vezes por semana, com foco primordial na conversação, abrangendo temas variados, debates, simulações de situações cotidianas e apresentações. Os dias da semana para a realização desses encontros serão definidos previamente para cada semestre.\n1.3. O serviço objeto deste contrato é de natureza híbrida, sendo composto por:\na) Licença de Acesso e Uso de Material Didático Digital: Concessão de uma licença não exclusiva e intransferível para que o CONTRATANTE acesse e utilize a integralidade do conteúdo digital do curso, incluindo, mas não se limitando à, videoaulas gravadas em plataforma, materiais em PDF e Powerpoint, atividades no Google Sala de Aula e outros recursos digitais. O acesso a este componente é liberado integralmente ao CONTRATANTE na data de início da vigência do contrato.\nb) Serviços de Instrução e Acompanhamento Contínuo: Prestação de serviços de ensino através de encontros de conversação online (aulas síncronas), suporte para dúvidas e acompanhamento pedagógico, que ocorrem de forma contínua e programada ao longo do período contratual.' },
+            { title: 'CLÁUSULA 2 - DURAÇÃO DO PROGRAMA', text: '2.1. O CONTRATANTE opta pelo programa de 6 (seis) meses ou 1 (um) ano de duração.\n2.2. Os encontros terão duração de 40 (quarenta) minutos cada, podendo ser estendidos para até 1 (uma) hora a depender do tema abordado a critério da CONTRATADA. Os demais períodos serão reservados para os recessos previstos no cronograma do programa.' },
+            { title: 'CLÁUSULA 3 - RESPONSABILIDADES DO/A CONTRATANTE', text: '3.1. O sucesso do programa depende diretamente do comprometimento do/a CONTRATANTE. Para alcançar os objetivos, este deverá:\na) Participar dos encontros síncronos agendados.\nb) Assistir às aulas gravadas disponibilizadas.\nc) Seguir o plano de estudos personalizado elaborado pelo programa.\n3.2. A ausência de comprometimento nas ações acima citadas pode comprometer os resultados esperados, não sendo responsabilidade da CONTRATADA.' },
+            { title: 'CLÁUSULA 4 - RESPONSABILIDADES DA CONTRATADA', text: '4.1. A CONTRATADA se compromete a fornecer ao(à) CONTRATANTE os serviços e recursos, conforme o plano de Clube de Conversação contratado e durante o período de vigência escolhido (6 ou 12 meses). Após esse período, o acesso será removido, caso não haja renovação do contrato. O CONTRATANTE poderá renovar o contrato a qualquer tempo, mediante novo acordo.\n4.2. A CONTRATADA também se responsabiliza por fornecer os seguintes recursos e serviços:\na) Acesso a módulos de aulas de gramática em vídeo na plataforma Nutror (ou plataforma de vídeo equivalente) e atividades no Google Sala de Aula. O número exato de aulas e exercícios dependerá do conteúdo disponibilizado.\nb) Os encontros online ocorrerão conforme a quantidade e duração especificadas na Cláusula 2.2.\nc) Acompanhamento mensal do desempenho do(a) CONTRATANTE.\n4.3. A CONTRATADA garante que será designado um mentor qualificado para acompanhar o(a) CONTRATANTE durante a vigência deste contrato, podendo ser profissionais diferentes, mas assegurando o mesmo método e padrão de acompanhamento da CONTRATADA.' },
+            { title: 'CLÁUSULA 5 - POLÍTICA DE PAGAMENTO E REEMBOLSO', text: '5.1. O pagamento pelos serviços do Clube de Conversação deve ser realizado no ato da contratação, seguindo as condições acordadas.\n5.2. Em caso de pagamento parcelado com cartão de crédito, poderá haver acréscimo no valor total do contrato devido às taxas cobradas pela operadora do cartão que serão arcadas pelo CONTRATANTE.\n5.3. Em caso de desistência por parte do CONTRATANTE após o início do curso após período de sete dias, será cobrado o valor proporcional referente às aulas não ministradas, calculado com base na carga horária contratada, nas licenças de acesso de uso do material e no valor total pago.\n5.4. Sobre o saldo remanescente referente valor das aulas não realizadas, poderá ser aplicada multa contratual de até 20% (vinte por cento), destinada a cobrir custos administrativos.\n5.5. O valor restante, após a dedução proporcional e da multa, será devolvido ao CONTRATANTE ou, a seu critério, convertido em crédito para utilização em outros serviços oferecidos pela CONTRATADA, válido por até 12 (doze) meses a partir da data da desistência.\n5.6. Fica assegurado ao CONTRATANTE o direito de arrependimento no prazo de 7 (sete) dias corridos a contar da assinatura do contrato ou do primeiro pagamento, com devolução integral dos valores pagos, conforme disposto no artigo 49 do Código de Defesa do Consumidor.' },
+            { title: 'CLÁUSULA 6 - CONFIDENCIALIDADE E USO DE INFORMAÇÕES', text: '6.1. Todas as informações pessoais e profissionais compartilhadas pelo/a CONTRATANTE com a CONTRATADA serão tratadas com sigilo. A CONTRATADA se compromete a não divulgar dados confidenciais a terceiros.\n6.2. O/A CONTRATANTE concorda que informações não confidenciais, como depoimentos, dados gerais sobre progresso e resultados, poderão ser utilizadas pela CONTRATADA para fins educativos e de propaganda. Isso inclui o uso como estudos de caso e materiais para a comunidade do Clube de Conversação.' },
+            { title: 'CLÁUSULA 7 - RESCISÃO DO CONTRATO', text: '7.1. O presente contrato será automaticamente rescindido ao término do prazo de vigência contratado (6 ou 12 meses), e o acesso a todo o conteúdo e serviços será encerrado neste momento.\n7.2. A CONTRATADA poderá rescindir o contrato caso o/a CONTRATANTE não siga as condições estabelecidas neste CONTRATO.' },
+            { title: 'CLÁUSULA 8 - DISPOSIÇÕES FINAIS', text: '8.1. Ao assinar este contrato, o/a CONTRATANTE declara que leu e concorda com os termos apresentados.\n8.2. A vigência deste contrato é a definida na Cláusula 2.1.\n8.3. O contrato é dado como válido quando enviado para a Contratada pelos seus canais de email ou whatsapp, e a Contratada dando ciência de está tudo correto, tal como o pagamento estando completo.' }
+        ];
+
         function getContractNumber() {
             let contractNumber = localStorage.getItem('contractCounter');
             if (!contractNumber || isNaN(parseInt(contractNumber))) {
@@ -131,6 +145,7 @@
         const contractContentModal = document.getElementById('contract-content-modal');
         const cpfInput = document.getElementById('cpf');
 
+        // Função para formatar o CPF
         cpfInput.addEventListener('input', (e) => {
             let value = e.target.value.replace(/\D/g, '');
             value = value.replace(/(\d{3})(\d)/, '$1.$2');
@@ -139,14 +154,26 @@
             e.target.value = value.slice(0, 14);
         });
 
-        function getContractTextForModal() {
-            return `
-                <h4>CLÁUSULA 1 - OBJETO</h4>
-                <p>1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês...</p>
-                <p><i>(Texto resumido para visualização. O contrato completo será gerado no PDF)</i></p>
-            `;
+        // --- FUNÇÃO PARA GERAR O CONTEÚDO HTML DO CONTRATO PARA O MODAL ---
+        function getContractHtml() {
+            let htmlContent = '';
+            contractClauses.forEach(clause => {
+                // Título em negrito e tamanho maior
+                htmlContent += `<h4 class="font-bold text-base mt-4 mb-1">${clause.title}</h4>`;
+                
+                // O white-space: pre-wrap do CSS garante a quebra de linha com \n
+                htmlContent += `<p class="text-sm text-gray-700">${clause.text}</p>`;
+            });
+
+            return htmlContent;
         }
         
+        // --- FUNÇÃO CORRIGIDA PARA O MODAL ---
+        function getContractTextForModal() {
+            // Retorna o conteúdo completo gerado pela nova função
+            return getContractHtml(); 
+        }
+
         viewContractLink.addEventListener('click', (e) => {
             e.preventDefault();
             contractContentModal.innerHTML = getContractTextForModal();
@@ -228,7 +255,6 @@
 
                 // --- NOVA FUNÇÃO PARA ADICIONAR TEXTO JUSTIFICADO ---
                 const addText = (text, options = {}) => {
-                    // O padrão de alinhamento agora é 'justify' (justificado)
                     const { size = 10, style = 'normal', align = 'justify', spaceAfter = 5 } = options;
                     
                     pdf.setFontSize(size);
@@ -236,30 +262,25 @@
 
                     const maxLineWidth = pageWidth - (margin * 2);
 
-                    // Verifica a altura que o texto vai ocupar para saber se cabe na página
                     const textDimensions = pdf.getTextDimensions(text, {
                         fontSize: size,
                         maxWidth: maxLineWidth
                     });
 
-                    // Se a posição atual + altura do texto passar do limite da página, cria nova página
                     if (y + textDimensions.h > pageHeight - margin) {
                         pdf.addPage();
                         y = margin;
                     }
 
-                    // Escreve o texto com o alinhamento e limite de largura definidos
                     pdf.text(text, margin, y, {
                         maxWidth: maxLineWidth,
                         align: align
                     });
 
-                    // Atualiza a posição Y para o próximo bloco
                     y += textDimensions.h + spaceAfter;
                 };
 
                 // --- MONTAGEM DO PDF ---
-                // Títulos e dados pessoais usam align: 'center' ou 'left' (padrão)
                 addText(`CONTRATO CLUBE DA FLUÊNCIA MY PERSONAL TEACHER ${contractNumberFormatted}/2025`, { size: 14, style: 'bold', align: 'center', spaceAfter: 10 });
                 addText('CONTRATADA: MY PERSONAL TEACHER, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob o n° 31.890.545/0001-44.', { style: 'bold', align: 'left', spaceAfter: 10 });
                 
@@ -269,21 +290,11 @@
                 addText(`ENDEREÇO: ${address}`, { style: 'bold', align: 'left' });
                 addText(`PLANO: ${plan}`, { style: 'bold', align: 'left', spaceAfter: 10 });
                 
-                const contractClauses = [
-                    { title: 'CLÁUSULA 1 - OBJETO', text: '1.1. O presente contrato tem como objeto a prestação de serviços para o Clube de Conversação Online, dirigido no idioma inglês, na modalidade de grupo de até 8 participantes, voltado à prática e desenvolvimento da fluência e conversação do(a) CONTRATANTE.\n1.2. O Clube da Fluência realizará encontros síncronos 2 (duas) vezes por semana, com foco primordial na conversação, abrangendo temas variados, debates, simulações de situações cotidianas e apresentações. Os dias da semana para a realização desses encontros serão definidos previamente para cada semestre.\n1.3. O serviço objeto deste contrato é de natureza híbrida, sendo composto por:\na) Licença de Acesso e Uso de Material Didático Digital: Concessão de uma licença não exclusiva e intransferível para que o CONTRATANTE acesse e utilize a integralidade do conteúdo digital do curso, incluindo, mas não se limitando à, videoaulas gravadas em plataforma, materiais em PDF e Powerpoint, atividades no Google Sala de Aula e outros recursos digitais. O acesso a este componente é liberado integralmente ao CONTRATANTE na data de início da vigência do contrato.\nb) Serviços de Instrução e Acompanhamento Contínuo: Prestação de serviços de ensino através de encontros de conversação online (aulas síncronas), suporte para dúvidas e acompanhamento pedagógico, que ocorrem de forma contínua e programada ao longo do período contratual.' },
-                    { title: 'CLÁUSULA 2 - DURAÇÃO DO PROGRAMA', text: '2.1. O CONTRATANTE opta pelo programa de 6 (seis) meses ou 1 (um) ano de duração.\n2.2. Os encontros terão duração de 40 (quarenta) minutos cada, podendo ser estendidos para até 1 (uma) hora a depender do tema abordado a critério da CONTRATADA. Os demais períodos serão reservados para os recessos previstos no cronograma do programa.' },
-                    { title: 'CLÁUSULA 3 - RESPONSABILIDADES DO/A CONTRATANTE', text: '3.1. O sucesso do programa depende diretamente do comprometimento do/a CONTRATANTE. Para alcançar os objetivos, este deverá:\na) Participar dos encontros síncronos agendados.\nb) Assistir às aulas gravadas disponibilizadas.\nc) Seguir o plano de estudos personalizado elaborado pelo programa.\n3.2. A ausência de comprometimento nas ações acima citadas pode comprometer os resultados esperados, não sendo responsabilidade da CONTRATADA.' },
-                    { title: 'CLÁUSULA 4 - RESPONSABILIDADES DA CONTRATADA', text: '4.1. A CONTRATADA se compromete a fornecer ao(à) CONTRATANTE os serviços e recursos, conforme o plano de Clube de Conversação contratado e durante o período de vigência escolhido (6 ou 12 meses). Após esse período, o acesso será removido, caso não haja renovação do contrato. O CONTRATANTE poderá renovar o contrato a qualquer tempo, mediante novo acordo.\n4.2. A CONTRATADA também se responsabiliza por fornecer os seguintes recursos e serviços:\na) Acesso a módulos de aulas de gramática em vídeo na plataforma Nutror (ou plataforma de vídeo equivalente) e atividades no Google Sala de Aula. O número exato de aulas e exercícios dependerá do conteúdo disponibilizado.\nb) Os encontros online ocorrerão conforme a quantidade e duração especificadas na Cláusula 2.2.\nc) Acompanhamento mensal do desempenho do(a) CONTRATANTE.\n4.3. A CONTRATADA garante que será designado um mentor qualificado para acompanhar o(a) CONTRATANTE durante a vigência deste contrato, podendo ser profissionais diferentes, mas assegurando o mesmo método e padrão de acompanhamento da CONTRATADA.' },
-                    { title: 'CLÁUSULA 5 - POLÍTICA DE PAGAMENTO E REEMBOLSO', text: '5.1. O pagamento pelos serviços do Clube de Conversação deve ser realizado no ato da contratação, seguindo as condições acordadas.\n5.2. Em caso de pagamento parcelado com cartão de crédito, poderá haver acréscimo no valor total do contrato devido às taxas cobradas pela operadora do cartão que serão arcadas pelo CONTRATANTE.\n5.3. Em caso de desistência por parte do CONTRATANTE após o início do curso após período de sete dias, será cobrado o valor proporcional referente às aulas não ministradas, calculado com base na carga horária contratada, nas licenças de acesso de uso do material e no valor total pago.\n5.4. Sobre o saldo remanescente referente valor das aulas não realizadas, poderá ser aplicada multa contratual de até 20% (vinte por cento), destinada a cobrir custos administrativos.\n5.5. O valor restante, após a dedução proporcional e da multa, será devolvido ao CONTRATANTE ou, a seu critério, convertido em crédito para utilização em outros serviços oferecidos pela CONTRATADA, válido por até 12 (doze) meses a partir da data da desistência.\n5.6. Fica assegurado ao CONTRATANTE o direito de arrependimento no prazo de 7 (sete) dias corridos a contar da assinatura do contrato ou do primeiro pagamento, com devolução integral dos valores pagos, conforme disposto no artigo 49 do Código de Defesa do Consumidor.' },
-                    { title: 'CLÁUSULA 6 - CONFIDENCIALIDADE E USO DE INFORMAÇÕES', text: '6.1. Todas as informações pessoais e profissionais compartilhadas pelo/a CONTRATANTE com a CONTRATADA serão tratadas com sigilo. A CONTRATADA se compromete a não divulgar dados confidenciais a terceiros.\n6.2. O/A CONTRATANTE concorda que informações não confidenciais, como depoimentos, dados gerais sobre progresso e resultados, poderão ser utilizadas pela CONTRATADA para fins educativos e de propaganda. Isso inclui o uso como estudos de caso e materiais para a comunidade do Clube de Conversação.' },
-                    { title: 'CLÁUSULA 7 - RESCISÃO DO CONTRATO', text: '7.1. O presente contrato será automaticamente rescindido ao término do prazo de vigência contratado (6 ou 12 meses), e o acesso a todo o conteúdo e serviços será encerrado neste momento.\n7.2. A CONTRATADA poderá rescindir o contrato caso o/a CONTRATANTE não siga as condições estabelecidas neste CONTRATO.' },
-                    { title: 'CLÁUSULA 8 - DISPOSIÇÕES FINAIS', text: '8.1. Ao assinar este contrato, o/a CONTRATANTE declara que leu e concorda com os termos apresentados.\n8.2. A vigência deste contrato é a definida na Cláusula 2.1.\n8.3. O contrato é dado como válido quando enviado para a Contratada pelos seus canais de email ou whatsapp, e a Contratada dando ciência de está tudo correto, tal como o pagamento estando completo.' }
-                ];
-
+                // Usando as cláusulas definidas no início do script
                 contractClauses.forEach(clause => {
                     // Títulos alinhados à esquerda (padrão)
                     addText(clause.title, { style: 'bold', size: 11, spaceAfter: 3, align: 'left' });
-                    // Texto do contrato JUSTIFICADO (quadradinho)
+                    // Texto do contrato JUSTIFICADO 
                     addText(clause.text, { size: 10, spaceAfter: 8, align: 'justify' });
                 });
 
@@ -328,4 +339,3 @@
     </script>
 </body>
 </html>
-
